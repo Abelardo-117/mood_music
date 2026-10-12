@@ -1,7 +1,7 @@
 name: mood_music
 description: Base modular de MoodMusic.
 publish_to: none
-version: 0.2.0+2
+version: 1.0.0+3
 environment:
   sdk: '>=3.4.0 <4.0.0'
 dependencies:
