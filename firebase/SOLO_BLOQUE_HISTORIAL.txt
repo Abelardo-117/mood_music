@@ -1,0 +1,21 @@
+    match /users/{uid}/listens/{eventId} {
+      function validListen() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['songId', 'title', 'artist', 'genre', 'qualifiedSeconds', 'listenedAt', 'syncedAt'])
+          && data.keys().hasOnly(['songId', 'title', 'artist', 'genre', 'qualifiedSeconds', 'listenedAt', 'syncedAt'])
+          && data.songId is string && data.songId.size() > 0 && data.songId.size() <= 200
+          && data.title is string && data.title.size() > 0 && data.title.size() <= 100
+          && data.artist is string && data.artist.size() > 0 && data.artist.size() <= 100
+          && data.genre is string && data.genre.size() > 0 && data.genre.size() <= 100
+          && data.qualifiedSeconds is int && data.qualifiedSeconds == 10
+          && data.listenedAt is timestamp
+          && data.syncedAt == request.time;
+      }
+      allow get: if isOwner(uid) || isAdmin();
+      allow list: if (isOwner(uid) || isAdmin()) && request.query.limit <= 100;
+      allow create: if isOwner(uid) && validListen();
+      // Reintentar el mismo evento solo actualiza su confirmación de envío.
+      allow update: if isOwner(uid) && validListen()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['syncedAt']);
+      allow delete: if false;
+    }

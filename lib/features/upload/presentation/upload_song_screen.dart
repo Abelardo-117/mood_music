@@ -1,0 +1,128 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:moodmusic_local_media/moodmusic_local_media.dart';
+import '../../catalog/domain/music_genres.dart';
+import '../../catalog/domain/music_moods.dart';
+import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
+import '../../../app/app_controller.dart';
+import '../../catalog/data/local_catalog_repository.dart';
+import '../../catalog/domain/song.dart';
+import '../../catalog/presentation/song_cover.dart';
+import '../data/local_file_picker.dart';
+
+class UploadSongScreen extends StatefulWidget {
+  const UploadSongScreen({super.key, required this.controller, this.song});
+  final AppController controller;
+  final Song? song;
+  @override
+  State<UploadSongScreen> createState() => _UploadSongScreenState();
+}
+class _UploadSongScreenState extends State<UploadSongScreen> {
+  final _form = GlobalKey<FormState>();
+  late final _title = TextEditingController(text: widget.song?.title);
+  late final _artist = TextEditingController(text: widget.song?.artist);
+  late String? _genre = widget.song?.genre;
+  late final Set<String> _moods = {...?widget.song?.moods};
+  String _status = '';
+  File? _audio, _cover;
+  bool _busy = false;
+  String? _error;
+  Future<void> _pick(bool cover, {bool video = false}) async {
+    setState(() { _busy = true; _error = null; _status = video ? 'Seleccionando video…' : 'Seleccionando archivo…'; });
+    try {
+      var file = await LocalFilePicker.pick(cover: cover, video: video);
+      if (file != null && video) {
+        final source = file;
+        if (mounted) setState(() => _status = 'Extrayendo el sonido del video…');
+        try { file = File(await MoodMusicLocalMedia.extractAudio(source.path)); }
+        finally { await LocalFilePicker.release(source); }
+      }
+      if (!mounted) { await LocalFilePicker.release(file); return; }
+      if (file != null) {
+        await LocalFilePicker.release(cover ? _cover : _audio);
+        if (cover) { _cover = file; } else { _audio = file; }
+      }
+    } on PlatformException catch (error) {
+      if (mounted) _error = error.message ?? 'No se pudo extraer el audio de este video.';
+    } on MissingPluginException {
+      if (mounted) _error = 'La función de video no está disponible. Cierra la app y vuelve a intentarlo.';
+    } catch (_) { if (mounted) _error = 'No se pudo leer el archivo. Límites: audio 100 MB, video 300 MB y portada 5 MB.'; }
+    finally { if (mounted) setState(() => _busy = false); }
+  }
+  Future<void> _save() async {
+    if (!_form.currentState!.validate()) return;
+    if (_audio == null && widget.song == null) { setState(() => _error = 'Selecciona un archivo de audio.'); return; }
+    setState(() { _busy = true; _error = null; _status = 'Comprobando y guardando audio…'; });
+    try {
+      if (!widget.controller.isAdmin) throw StateError('Sin permiso');
+      if (_audio != null) {
+        await widget.controller.audio?.pause();
+        final probe = AudioPlayer();
+        try { await probe.setFilePath(_audio!.path).timeout(const Duration(seconds: 20)); }
+        finally { await probe.dispose(); }
+      }
+      if (!mounted) return;
+      if (!widget.controller.isAdmin) throw StateError('Sin permiso');
+      final repo = widget.controller.catalog as LocalCatalogRepository;
+      if (widget.song != null) await widget.controller.audio?.stop();
+      if (!widget.controller.isAdmin) throw StateError('Sin permiso');
+      await repo.save(existing: widget.song, title: _title.text, artist: _artist.text,
+        genre: _genre!, moods: _moods.toList(), audio: _audio, cover: _cover);
+      if (mounted) Navigator.pop(context);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'No se pudo guardar. Comprueba que el audio se pueda reproducir, que tengas espacio y que tu permiso siga activo.');
+    } finally { if (mounted) setState(() => _busy = false); }
+  }
+  @override
+  void dispose() {
+    _title.dispose(); _artist.dispose();
+    unawaited(LocalFilePicker.release(_audio)); unawaited(LocalFilePicker.release(_cover));
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(listenable: widget.controller.adminAccess,
+    builder: (context, _) => PopScope(canPop: !_busy, child: Scaffold(
+      appBar: AppBar(title: Text(widget.song == null ? 'Agregar canción' : 'Editar canción')),
+      body: !widget.controller.isAdmin ? const Center(child: Text('Se necesita acceso de administrador.')) :
+      Form(key: _form, child: ListView(padding: const EdgeInsets.all(24), children: [
+        Center(child: SongCover(path: _cover?.path ?? widget.song?.coverUrl, size: 180)),
+        TextButton.icon(onPressed: _busy ? null : () => _pick(true), icon: const Icon(Icons.image_outlined), label: const Text('Elegir portada')),
+        const SizedBox(height: 16),
+        for (final field in [(controller: _title, label: 'Título'), (controller: _artist, label: 'Artista')])
+          Padding(padding: const EdgeInsets.only(bottom: 16), child: TextFormField(controller: field.controller,
+            enabled: !_busy, maxLength: 100, decoration: InputDecoration(labelText: field.label),
+            validator: (value) => value == null || value.trim().isEmpty ? 'Completa este campo.' : null)),
+        DropdownButtonFormField<String>(
+          initialValue: _genre, isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Género'),
+          items: genreOptions(widget.song?.genre).map((genre) => DropdownMenuItem(value: genre, child: Text(genre))).toList(),
+          onChanged: _busy ? null : (value) => setState(() => _genre = value),
+          validator: (value) => value == null ? 'Selecciona un género.' : null,
+        ),
+        const SizedBox(height: 16),
+        Text('Estados de ánimo (opcional)', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: musicMoods.map((mood) => FilterChip(
+          label: Text(mood), selected: _moods.contains(mood),
+          onSelected: _busy ? null : (selected) => setState(() {
+            if (selected) { _moods.add(mood); } else { _moods.remove(mood); }
+          }),
+        )).toList()),
+        const SizedBox(height: 20),
+        OutlinedButton.icon(onPressed: _busy ? null : () => _pick(false), icon: const Icon(Icons.audio_file_outlined),
+          label: Text(_audio != null ? 'Audio seleccionado · Cambiar' : widget.song != null ? 'Reemplazar audio (opcional)' : 'Seleccionar audio')),
+        const SizedBox(height: 8), const Text('MP3, M4A, AAC, WAV, OGG o FLAC · hasta 100 MB'),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(onPressed: _busy ? null : () => _pick(false, video: true),
+          icon: const Icon(Icons.video_file_outlined), label: const Text('Extraer audio de un video')),
+        const Text('Video · hasta 300 MB'),
+        if (_error != null) Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+        const SizedBox(height: 16),
+        if (_busy) ...[Text(_status), const SizedBox(height: 8), const LinearProgressIndicator()],
+        FilledButton.icon(onPressed: _busy ? null : _save, icon: const Icon(Icons.save_outlined), label: const Text('Guardar canción')),
+      ])),
+    )),
+  );
+}

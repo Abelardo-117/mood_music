@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1022496998775",
+    "project_id": "moodmusic-4b6b7",
+    "storage_bucket": "moodmusic-4b6b7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1022496998775:android:67014181bb0b637ade8d72",
+        "android_client_info": {
+          "package_name": "com.yahirjavier.mood_music"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1022496998775-191dd87dfe8o5c2qil6uc0m2cdklehu8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yahirjavier.mood_music",
+            "certificate_hash": "e5de226767885cc8395bd7172bba9035ec623101"
+          }
+        },
+        {
+          "client_id": "1022496998775-hvld6dr13ril7k0fggpki0ghg7bolrq3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDne57cPKp3Y80_ufv9IopLlBgS2IjbX8Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1022496998775-hvld6dr13ril7k0fggpki0ghg7bolrq3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
