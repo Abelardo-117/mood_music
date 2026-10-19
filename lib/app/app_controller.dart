@@ -1,3 +1,5 @@
+import '../features/catalog/data/account_catalog_repository.dart';
+import '../features/catalog/data/local_catalog_repository.dart';
 import '../features/profile/domain/access_repository.dart';
 import '../features/activity/data/listening_tracker.dart';
 import '../features/activity/domain/listening_repository.dart';
@@ -33,13 +35,14 @@ class AppController extends ChangeNotifier {
       name = user == null ? _preferences.name :
           (user.displayName?.trim().isNotEmpty == true ? user.displayName!.trim() : 'Usuario');
       _favorites = _preferences.favoritesFor(owner);
-      if (changed) { _accessPendingUid = userId; listening?.bind(userId); unawaited(audio?.stop()); demoOpen = false; adminAccess.bind(userId); }
+      if (changed) { _bindCatalog(userId); _accessPendingUid = userId; listening?.bind(userId); unawaited(audio?.stop()); demoOpen = false; adminAccess.bind(userId); }
       sessionReady = true;
       sessionError = false;
       unawaited(syncProfile());
       notifyListeners();
     }, onError: (Object error) {
       _accessPendingUid = null;
+      _bindCatalog(null);
       listening?.bind(null);
       unawaited(audio?.stop());
       _profileRevision++; profileSyncing = false; profileError = null;
@@ -59,6 +62,19 @@ class AppController extends ChangeNotifier {
   bool get isAdmin => isSignedIn && adminAccess.allowed;
   final PreferencesService _preferences;
   final CatalogRepository catalog;
+  LocalCatalogRepository? get localCatalog {
+    final source = catalog;
+    if (source is AccountCatalogRepository) {
+      return source.owner == userId ? source.local : null;
+    }
+    return source is LocalCatalogRepository ? source : null;
+  }
+  bool get canManageMusic => isSignedIn && localCatalog != null;
+  void _bindCatalog(String? uid) {
+    final source = catalog;
+    if (source is AccountCatalogRepository) unawaited(source.bind(uid));
+  }
+  void retryLibrary() => _bindCatalog(userId);
   final FirebaseAuthRepository? auth;
   final ProfileRepository? profiles;
   final AccessRepository? access;

@@ -74,6 +74,12 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['syncedAt']);
       allow delete: if false;
     }
+    // El audio se publica aparte; aquí solo se leen sus metadatos.
+    // La publicación se administra desde Firebase Console.
+    match /shared_songs/{songId} {
+      allow get: if request.auth != null && songId == 'demo_01';
+      allow list, create, update, delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }

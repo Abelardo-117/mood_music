@@ -1,3 +1,4 @@
+import 'features/catalog/data/firestore_shared_song_repository.dart';
 import 'features/profile/data/firestore_access_repository.dart';
 import 'features/activity/data/firestore_listening_repository.dart';
 import 'features/activity/data/listening_tracker.dart';
@@ -13,7 +14,7 @@ import 'features/admin/data/firestore_admin_access_repository.dart';
 import 'features/profile/data/firestore_profile_repository.dart';
 import 'app/app_controller.dart';
 import 'core/storage/preferences_service.dart';
-import 'features/catalog/data/local_catalog_repository.dart';
+import 'features/catalog/data/account_catalog_repository.dart';
 import 'features/auth/data/firebase_auth_repository.dart';
 
 Future<void> main() async {
@@ -22,7 +23,7 @@ Future<void> main() async {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     final preferences = await PreferencesService.create();
     final auth = FirebaseAuthRepository();
-    final catalog = await LocalCatalogRepository.open();
+    final catalog = AccountCatalogRepository(watchShared: FirestoreSharedSongRepository().watch);
     final audio = await AudioService.init<MusicAudioHandler>(
       builder: MusicAudioHandler.new,
       config: const AudioServiceConfig(

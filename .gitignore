@@ -54,3 +54,5 @@ android/key.properties
 *.jks
 *.keystore
 *firebase-adminsdk*.json
+# Caché local de Firebase
+.firebase/

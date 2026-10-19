@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io';
+import '../domain/media_uri.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
@@ -42,7 +42,7 @@ class MusicAudioHandler extends BaseAudioHandler {
         title: s.title,
         artist: s.artist,
         genre: s.genre,
-        artUri: s.coverUrl == null ? null : File(s.coverUrl!).uri,
+        artUri: s.coverUrl == null ? null : mediaUri(s.coverUrl!),
         duration: duration,
       );
   void _publishItem() {
@@ -125,7 +125,7 @@ class MusicAudioHandler extends BaseAudioHandler {
       _publish();
       final selectedIndex = _songs.indexWhere((s) => s.id == selected.id);
       await player.setAudioSources(
-        _songs.map((s) => AudioSource.uri(File(s.audioUrl!).uri)).toList(),
+        _songs.map((s) => AudioSource.uri(mediaUri(s.audioUrl!))).toList(),
         initialIndex: selectedIndex < 0 ? 0 : selectedIndex,
       );
       if (generation != _generation) return;

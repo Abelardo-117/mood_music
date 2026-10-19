@@ -1,7 +1,6 @@
 import 'access_label.dart';
 import 'user_likes_screen.dart';
 import 'package:flutter/material.dart';
-import 'local_songs_screen.dart';
 import '../../../app/app_controller.dart';
 import '../domain/admin_access_repository.dart';
 
@@ -49,7 +48,6 @@ class _AdminProfilesState extends State<_AdminProfiles> {
           SizedBox(height: 8), Text('Tu comunidad, en un solo lugar.', style: TextStyle(color: Colors.white)),
         ])),
       const SizedBox(height: 24),
-      Card(child: ListTile(leading: const Icon(Icons.library_music), title: const Text('Administrar canciones'), subtitle: const Text('Agregar, editar y eliminar canciones'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => LocalSongsScreen(controller: widget.controller))))),
       const SizedBox(height: 24),
       Text('Usuarios', style: Theme.of(context).textTheme.headlineSmall),
       const SizedBox(height: 16),

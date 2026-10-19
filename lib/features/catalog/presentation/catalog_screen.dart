@@ -1,3 +1,4 @@
+import '../data/account_catalog_repository.dart';
 import 'package:flutter/material.dart';
 import '../../../app/app_controller.dart';
 import '../domain/music_moods.dart';
@@ -23,7 +24,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: widget.controller,
     builder: (context, _) {
-      final catalog = widget.controller.catalog.songs;
+      final source = widget.controller.catalog;
+      final sharedError = source is AccountCatalogRepository ? source.sharedError : null;
+      final catalog = source.songs;
       final songs = catalog.where((s) =>
         (!widget.favoritesOnly || widget.controller.isFavorite(s)) &&
         (!isHome || mood == null || s.moods.contains(mood)) &&
@@ -34,6 +37,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
         Text(widget.favoritesOnly ? 'Tus favoritos' : widget.searchPage ? 'Encuentra tu ritmo' : 'Hola, ${widget.controller.name}',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 20),
+        if (isHome && sharedError != null) ListTile(
+          title: Text(sharedError),
+          trailing: TextButton(onPressed: () {
+            if (source is AccountCatalogRepository) source.retryShared();
+          }, child: const Text('Reintentar')),
+        ),
         if (widget.searchPage) ...[
           TextField(onChanged: (v) => setState(() => query = v.trim()),
             decoration: const InputDecoration(hintText: 'Canción, artista o género', prefixIcon: Icon(Icons.search))),
@@ -76,8 +85,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
         ],
         if (songs.isEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 24), child: Text(
           isHome && mood != null
-            ? widget.controller.isAdmin
-              ? 'Aún no hay canciones para este ánimo. Asígnalo al agregar o editar una canción en Administrar canciones.'
+            ? widget.controller.isSignedIn
+              ? 'Aún no hay canciones para este ánimo. Asígnalo al agregar o editar una canción en Mi música.'
               : 'Aún no hay canciones para este ánimo. Prueba otro o selecciona Todas.'
             : 'No hay canciones que coincidan.')),
         ...songs.map((s) => SongTile(song: s, controller: widget.controller, playlist: playable)),

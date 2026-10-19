@@ -88,9 +88,12 @@ class LocalCatalogRepository extends ChangeNotifier implements CatalogRepository
     return song;
   });
   Future<void> remove(Song song) => _exclusive(() async {
-    await _commit(_songs.where((s) => s.id != song.id).toList());
-    await _cleanup(song.audioUrl);
-    await _cleanup(song.coverUrl);
+    final matches = _songs.where((s) => s.id == song.id);
+    if (matches.isEmpty) throw StateError('La canción no pertenece a esta biblioteca.');
+    final stored = matches.single;
+    await _commit(_songs.where((s) => s.id != stored.id).toList());
+    await _cleanup(stored.audioUrl);
+    await _cleanup(stored.coverUrl);
   });
   Future<void> _cleanup(String? path) async {
     if (path == null || File(path).parent.absolute.uri.normalizePath() != directory.absolute.uri.normalizePath()) return;

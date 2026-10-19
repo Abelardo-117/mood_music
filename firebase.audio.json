@@ -1,0 +1,25 @@
+{
+  "hosting": {
+    "site": "moodmusic-4b6b7-audio",
+    "public": "hosting_audio",
+    "ignore": [
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "/audio/**",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "audio/mpeg"
+          },
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=3600"
+          }
+        ]
+      }
+    ]
+  }
+}
